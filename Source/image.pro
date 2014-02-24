@@ -1,5 +1,5 @@
 TARGET = ImageFilters
-QT += opengl
+QT += widgets
 DESTDIR = ../Build
 
 HEADERS += \
