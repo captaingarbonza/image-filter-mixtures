@@ -3,7 +3,15 @@ image-filter-mixtures
 
 Applies combinations of different image filters to a photography in order to simulate a user defined painting style.
 
-* NOTE: I haven't committed the actual filters yet, so it doesn't really do anything at present
+* Only one test filter added at present to get the GUI up and running
+
+TODO:
+* Progress bar
+* Add Glass Patterns and Pointilism filters
+* Add combination filters and hook up to complete GUI
+* Optimize filter processing
+* Menu options
+* Tooltips
 
 Usage
 ---------
