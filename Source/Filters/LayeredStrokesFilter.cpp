@@ -209,7 +209,7 @@ RunFilter(QImage* source, QImage* destination, int max_brush_size, int min_brush
 		}
 	}
 	delete [] depth_buffer;
-	//delete reference_image;
+	delete reference_image;
 }
 
 void 
