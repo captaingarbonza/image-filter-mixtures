@@ -2,16 +2,9 @@
 #define _MAIN_WINDOW_
 
 #include <QApplication>
-#include <QDesktopWidget>
-#include <QMainWindow>
-#include <QAction>
-#include <QMenu>
-#include <QMenuBar>
-#include <QLabel>
-#include <QScrollArea>
-#include <QImage>
-#include <QFileDialog>
-#include <QSettings>
+#include <QtWidgets>
+
+#include "FilterProcessingThread.h"
 
 class MainWindow : public QMainWindow
 {
@@ -27,16 +20,33 @@ class MainWindow : public QMainWindow
 	public slots:
     	void Open();
     	void Save();
+    	void ApplyCurrentFilter();
+    	void UpdateCurrentImage( QImage image );
 
 	private:
-		QImage mOriginalImage;
-		QScrollArea mScrollArea;
-		QLabel mImageContainer;
+		void InitFilterControls( QLayout* layout );
+
+		FilterProcessingThread* mFilterProcessingThread;
+
+		/// Or could have an enum of filter types and store the ones that are enabled. If more than two, ghost others out.
+		/// Objects could store filter id? Overkill?
+		bool mLayeredStrokesEnabled;
+		bool mPointillismEnabled;
+		bool mGlassPatternsEnabled;
+
+		//QImage* mOriginalImage;
+		QScrollArea* mScrollArea;
+		QLabel* mImageContainer;
 
 		QMenu* mFileMenu;
 
 		QAction* mOpenAction;
 		QAction* mSaveAction;
+
+		QWidget* mCentralWidget;
+		QWidget* mOptionsWidget;
+		QVBoxLayout* mOptionsPaneLayout;
+		QHBoxLayout* mMainLayout;
 };
 
 #endif

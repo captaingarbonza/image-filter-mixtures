@@ -1,31 +1,32 @@
 #include "MainWindow.h"
 
-const int NUM_ZOOM_SIZES = 9;
-const int ZOOM_SIZES_ARRAY[] = { 12, 25, 50, 75, 100, 125, 200, 300, 400 };
-
 MainWindow::MainWindow()
 ///
 /// Constructor
 ///
-: mOriginalImage(),
-  mScrollArea(),
-  mImageContainer()
+: mLayeredStrokesEnabled( false ),
+  mPointillismEnabled( false ),
+  mGlassPatternsEnabled( false )
 {
 	setMaximumSize( QSize( 1250, 650 ) );
     setMinimumSize( QSize( 200, 200 ) );
 
+    mFilterProcessingThread = new FilterProcessingThread( this );
+    connect( mFilterProcessingThread, SIGNAL( FilterProcessingComplete(QImage) ), this, SLOT( UpdateCurrentImage(QImage) ) );
 
-    mImageContainer.setBackgroundRole( QPalette::Base );
-    mImageContainer.setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
-    mImageContainer.setScaledContents( true );
+    //mOriginalImage = new QImage;
 
-    mScrollArea.setBackgroundRole( QPalette::Dark );
-    mScrollArea.setWidget( &mImageContainer );
+    mScrollArea = new QScrollArea;
+    mScrollArea->setBackgroundRole( QPalette::Dark );
 
-   	mScrollArea.setMaximumSize( QSize( 1250, 650 ) );
-    mScrollArea.setMinimumSize( QSize( 200, 200 ) );
+    mImageContainer = new QLabel;
+    mImageContainer->setBackgroundRole( QPalette::Base );
+    mImageContainer->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
+    mImageContainer->setScaledContents( true );
 
-	setCentralWidget( &mScrollArea );
+    mScrollArea->setWidget( mImageContainer );
+   	mScrollArea->setMaximumSize( QSize( 1250, 650 ) );
+    mScrollArea->setMinimumSize( QSize( 200, 200 ) );
 
 	setWindowTitle( tr( "Artistic Image Filters " ) );
 
@@ -51,6 +52,27 @@ MainWindow::MainWindow()
 	mFileMenu = menuBar()->addMenu( tr("&File") );
 	mFileMenu->addAction( mOpenAction );
 	mFileMenu->addAction( mSaveAction );
+
+	mOptionsWidget = new QWidget;
+	mOptionsWidget->setMinimumSize( QSize( 200, 200 ) );
+	mOptionsWidget->setMaximumWidth( 200 );
+
+	mOptionsPaneLayout = new QVBoxLayout;
+	mOptionsPaneLayout->setContentsMargins( 10, 10, 10, 10 );
+	mOptionsWidget->setLayout( mOptionsPaneLayout );
+
+	InitFilterControls( mOptionsPaneLayout );
+
+	mMainLayout = new QHBoxLayout;
+	mMainLayout->addWidget( mScrollArea );
+	mMainLayout->addWidget( mOptionsWidget );
+	mMainLayout->setContentsMargins( 0, 0, 0, 0 );
+
+	mCentralWidget = new QWidget;
+	mCentralWidget->setLayout( mMainLayout );
+	mCentralWidget->setMinimumSize( mScrollArea->minimumWidth() + mOptionsWidget->minimumWidth(), mOptionsWidget->minimumHeight() );
+	setCentralWidget( mCentralWidget );
+	setMinimumSize( mCentralWidget->minimumSize() );
 }
 
 MainWindow::~MainWindow()
@@ -61,6 +83,10 @@ MainWindow::~MainWindow()
 	delete mOpenAction;
 	delete mSaveAction;
 	delete mFileMenu;
+
+	delete mCentralWidget;
+
+	delete mFilterProcessingThread;
 }
 
 void
@@ -77,7 +103,6 @@ MainWindow::Open()
 
 	// Display an open file dialog at the last folder opened by the application
 	QString file_name = QFileDialog::getOpenFileName( this, tr("Open File"), app_settings.value(default_dir_key).toString(), "Images (*.png *.bmp *.jpg)" );
-
     if( file_name != "" )
     {
     	// Set the directory of the opened file as the default directory in the application settings
@@ -85,9 +110,11 @@ MainWindow::Open()
         app_settings.setValue(default_dir_key, current_dir.absoluteFilePath(file_name));
 
         // Load the chosen file as the unprocessed image
-        mOriginalImage.load( file_name );
-        mImageContainer.setPixmap( QPixmap::fromImage( mOriginalImage ) );
-        mImageContainer.adjustSize();
+        QImage* image = new QImage;
+        image->load( file_name );
+        mImageContainer->setPixmap( QPixmap::fromImage( *image ) );
+        mImageContainer->adjustSize();
+        mFilterProcessingThread->SetImage( image );
         Resize();
     }
 }
@@ -105,6 +132,19 @@ MainWindow::Save()
 }
 
 void
+MainWindow::ApplyCurrentFilter()
+{
+	mFilterProcessingThread->BeginProcessing();
+}
+
+void
+MainWindow::UpdateCurrentImage( QImage image )
+{
+	mImageContainer->setPixmap( QPixmap::fromImage( image ) );
+    mImageContainer->adjustSize();
+}
+
+void
 MainWindow::Resize()
 ///
 /// Resizes the window to the size of the current image if it is within the window size limits.
@@ -114,7 +154,7 @@ MainWindow::Resize()
 ///  Nothing
 ///
 {
-	this->resize( mImageContainer.size() );
+	this->resize( mImageContainer->size() );
 	Center();
 }
 
@@ -130,4 +170,35 @@ MainWindow::Center()
   int x = (QApplication::desktop()->width() - this->width()) / 2;
   int y = (QApplication::desktop()->height()  - this->height()) / 2;
   this->move(x,y);
+}
+
+void
+MainWindow::InitFilterControls( QLayout* layout )
+{
+	QCheckBox* checkbox1 = new QCheckBox(tr("Layered Strokes"));
+	QCheckBox* checkbox2 = new QCheckBox(tr("Pointilism"));
+	QCheckBox* checkbox3 = new QCheckBox(tr("Glass Patterns"));
+
+	checkbox1->setStyleSheet("QCheckBox::indicator { width: 50 px; height: 50 px; } \
+							  QCheckBox::indicator:unchecked { image: url(:/images/layered-strokes-unchecked.png); } \
+							  QCheckBox::indicator:unchecked:hover { image: url(:/images/layered-strokes-hover.png); } \
+							  QCheckBox::indicator:checked { image: url(:/images/layered-strokes-checked.png); }");
+
+	checkbox2->setStyleSheet("QCheckBox::indicator { width: 50 px; height: 50 px; } \
+							  QCheckBox::indicator:unchecked { image: url(:/images/layered-strokes-unchecked.png); } \
+							  QCheckBox::indicator:unchecked:hover { image: url(:/images/layered-strokes-hover.png); } \
+							  QCheckBox::indicator:checked { image: url(:/images/layered-strokes-checked.png); }");
+
+	checkbox3->setStyleSheet("QCheckBox::indicator { width: 50 px; height: 50 px; } \
+							  QCheckBox::indicator:unchecked { image: url(:/images/layered-strokes-unchecked.png); } \
+							  QCheckBox::indicator:unchecked:hover { image: url(:/images/layered-strokes-hover.png); } \
+							  QCheckBox::indicator:checked { image: url(:/images/layered-strokes-checked.png); }");
+
+	//layout->addWidget(checkbox1);
+	//layout->addWidget(checkbox2);
+	//layout->addWidget(checkbox3);
+
+	QPushButton* apply_filters_button = new QPushButton(tr("Apply Filters"));
+	connect( apply_filters_button, SIGNAL( clicked() ), this, SLOT( ApplyCurrentFilter() ) );
+	layout->addWidget(apply_filters_button);
 }
