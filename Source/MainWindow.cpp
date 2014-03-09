@@ -8,42 +8,20 @@ MainWindow::MainWindow()
   mPointillismEnabled( false ),
   mGlassPatternsEnabled( false )
 {
+    setWindowTitle( tr( "Artistic Image Filters " ) );
+    
 	setMaximumSize( QSize( 1250, 650 ) );
     setMinimumSize( QSize( 200, 200 ) );
 
     mFilterProcessingThread = new FilterProcessingThread( this );
     connect( mFilterProcessingThread, SIGNAL( FilterProcessingComplete(QImage) ), this, SLOT( UpdateCurrentImage(QImage) ) );
+    
+    mMainLayout = new QHBoxLayout;
+    mMainLayout->setContentsMargins( 0, 0, 0, 0 );
 
-    mScrollArea = new QScrollArea;
-    mScrollArea->setBackgroundRole( QPalette::Dark );
-
-    mImageContainer = new QLabel;
-    mImageContainer->setBackgroundRole( QPalette::Base );
-    mImageContainer->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
-    mImageContainer->setScaledContents( true );
-
-    mScrollArea->setWidget( mImageContainer );
-   	mScrollArea->setMaximumSize( QSize( 1250, 650 ) );
-    mScrollArea->setMinimumSize( QSize( 200, 200 ) );
-
-	setWindowTitle( tr( "Artistic Image Filters " ) );
-
+    InitImagePane( mMainLayout );
 	InitMenuBar();
-
-	mOptionsWidget = new QWidget;
-	mOptionsWidget->setMinimumSize( QSize( 200, 200 ) );
-	mOptionsWidget->setMaximumWidth( 200 );
-
-	mOptionsPaneLayout = new QVBoxLayout;
-	mOptionsPaneLayout->setContentsMargins( 10, 10, 10, 10 );
-	mOptionsWidget->setLayout( mOptionsPaneLayout );
-
-	InitFilterControls( mOptionsPaneLayout );
-
-	mMainLayout = new QHBoxLayout;
-	mMainLayout->addWidget( mScrollArea );
-	mMainLayout->addWidget( mOptionsWidget );
-	mMainLayout->setContentsMargins( 0, 0, 0, 0 );
+	InitFilterControls( mMainLayout );
 
 	mCentralWidget = new QWidget;
 	mCentralWidget->setLayout( mMainLayout );
@@ -251,6 +229,16 @@ MainWindow::InitFilterControls( QLayout* layout )
 ///  Nothing
 ///
 {
+    mOptionsWidget = new QWidget;
+	mOptionsWidget->setMinimumSize( QSize( 200, 200 ) );
+	mOptionsWidget->setMaximumWidth( 200 );
+    
+	mOptionsPaneLayout = new QVBoxLayout;
+	mOptionsPaneLayout->setContentsMargins( 10, 10, 10, 10 );
+	mOptionsWidget->setLayout( mOptionsPaneLayout );
+    
+    layout->addWidget( mOptionsWidget );
+    
 	QCheckBox* checkbox1 = new QCheckBox(tr("Layered Strokes"));
 	QCheckBox* checkbox2 = new QCheckBox(tr("Pointilism"));
 	QCheckBox* checkbox3 = new QCheckBox(tr("Glass Patterns"));
@@ -270,9 +258,9 @@ MainWindow::InitFilterControls( QLayout* layout )
 							  QCheckBox::indicator:unchecked:hover { image: url(:/images/layered-strokes-hover.png); } \
 							  QCheckBox::indicator:checked { image: url(:/images/layered-strokes-checked.png); }");
 
-	layout->addWidget(checkbox1);
-	layout->addWidget(checkbox2);
-	layout->addWidget(checkbox3);
+	mOptionsPaneLayout->addWidget(checkbox1);
+	mOptionsPaneLayout->addWidget(checkbox2);
+	mOptionsPaneLayout->addWidget(checkbox3);
     
     // Set up the checkboxes to change the state of the filters
     connect( checkbox1, SIGNAL( toggled(bool) ), this, SLOT( LayeredStrokesStateChange(bool) ) );
@@ -291,7 +279,7 @@ MainWindow::InitFilterControls( QLayout* layout )
 
 	QPushButton* apply_filters_button = new QPushButton(tr("Apply Filters"));
 	connect( apply_filters_button, SIGNAL( clicked() ), this, SLOT( ApplyCurrentFilter() ) );
-	layout->addWidget(apply_filters_button);
+	mOptionsPaneLayout->addWidget(apply_filters_button);
 }
 
 void
@@ -325,4 +313,28 @@ MainWindow::InitMenuBar()
 	mFileMenu = menuBar()->addMenu( tr("&File") );
 	mFileMenu->addAction( mOpenAction );
 	mFileMenu->addAction( mSaveAction );
+}
+
+void
+MainWindow::InitImagePane( QLayout* layout )
+///
+/// Initializes the central pane the contains the image to be filtered.
+///
+/// @return
+///  Nothing
+///
+{
+    mScrollArea = new QScrollArea;
+    mScrollArea->setBackgroundRole( QPalette::Dark );
+    
+    mImageContainer = new QLabel;
+    mImageContainer->setBackgroundRole( QPalette::Base );
+    mImageContainer->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
+    mImageContainer->setScaledContents( true );
+    
+    mScrollArea->setWidget( mImageContainer );
+   	mScrollArea->setMaximumSize( QSize( 1250, 650 ) );
+    mScrollArea->setMinimumSize( QSize( 200, 200 ) );
+    
+    layout->addWidget( mScrollArea );
 }

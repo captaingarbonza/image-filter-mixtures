@@ -39,6 +39,7 @@ class MainWindow : public QMainWindow
         void GlassPatternsUnghosted( bool ghosted );
 
 	private:
+        void InitImagePane( QLayout* layout );
 		void InitFilterControls( QLayout* layout );
 		void InitMenuBar();
 
