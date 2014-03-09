@@ -15,6 +15,7 @@ class FilterProcessingThread : public QThread
 	    void BeginProcessing();
 
 	signals:
+        void ImageLoaded( bool loaded);
 	    void FilterProcessingComplete( QImage result );
 
 	protected:

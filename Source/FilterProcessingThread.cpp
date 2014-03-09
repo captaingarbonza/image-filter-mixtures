@@ -93,6 +93,7 @@ FilterProcessingThread::SetImage( QImage* image )
         delete mOriginalImage;
     }
 	mOriginalImage = image;
+    emit ImageLoaded( mOriginalImage != NULL );
 }
 
 void 

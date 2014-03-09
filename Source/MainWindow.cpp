@@ -282,11 +282,11 @@ MainWindow::InitMenuBar()
 	mSaveAction = new QAction( tr("&Save"), this );	
 
 	///
-	/// Ghost out actions that need an image to be loaded and connect these
-	/// actions so they turn back on when the results widget sets an image sucessfully.
+	/// Ghost the save action as it needs an image to be loaded to function correctly.
+	/// Connect the action so it turns back on when an image is set successfully.
 	///
 	mSaveAction->setDisabled( true );
-	//connect( mMainImagePane, SIGNAL( ImageLoaded(bool) ), mSaveAction, SLOT( setEnabled(bool) ) );
+	connect( mFilterProcessingThread, SIGNAL( ImageLoaded(bool) ), mSaveAction, SLOT( setEnabled(bool) ) );
 
 	///
 	/// Connect the actions to their slots in mMainImagePane
