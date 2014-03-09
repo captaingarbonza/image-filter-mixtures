@@ -12,8 +12,7 @@ class FilterProcessingThread : public QThread
 	    ~FilterProcessingThread();
 
 	    void SetImage( QImage* image );
-	    //QImage GetImage();
-	    void BeginProcessing( );
+	    void BeginProcessing();
 
 	signals:
 	    void FilterProcessingComplete( QImage result );

@@ -14,8 +14,6 @@ MainWindow::MainWindow()
     mFilterProcessingThread = new FilterProcessingThread( this );
     connect( mFilterProcessingThread, SIGNAL( FilterProcessingComplete(QImage) ), this, SLOT( UpdateCurrentImage(QImage) ) );
 
-    //mOriginalImage = new QImage;
-
     mScrollArea = new QScrollArea;
     mScrollArea->setBackgroundRole( QPalette::Dark );
 
@@ -30,28 +28,7 @@ MainWindow::MainWindow()
 
 	setWindowTitle( tr( "Artistic Image Filters " ) );
 
-	mOpenAction = new QAction( tr("&Open"), this );
-	mSaveAction = new QAction( tr("&Save"), this );	
-
-	///
-	/// Ghost out actions that need an image to be loaded and connect these
-	/// actions so they turn back on when the results widget sets an image sucessfully.
-	///
-	mSaveAction->setDisabled( true );
-	//connect( mMainImagePane, SIGNAL( ImageLoaded(bool) ), mSaveAction, SLOT( setEnabled(bool) ) );
-
-	///
-	/// Connect the actions to their slots in mMainImagePane
-	///
-	connect( mOpenAction, SIGNAL( triggered() ), this, SLOT( Open() ) );
-	connect( mSaveAction, SIGNAL( triggered() ), this, SLOT( Save() ) );
-
-	///
-	/// Add the actions to the menu
-	///
-	mFileMenu = menuBar()->addMenu( tr("&File") );
-	mFileMenu->addAction( mOpenAction );
-	mFileMenu->addAction( mSaveAction );
+	InitMenuBar();
 
 	mOptionsWidget = new QWidget;
 	mOptionsWidget->setMinimumSize( QSize( 200, 200 ) );
@@ -101,20 +78,25 @@ MainWindow::Open()
 	const QString default_dir_key("default_dir");
 	QSettings app_settings;
 
-	// Display an open file dialog at the last folder opened by the application
+	// Display an open file dialog at the default folder in the application setting
 	QString file_name = QFileDialog::getOpenFileName( this, tr("Open File"), app_settings.value(default_dir_key).toString(), "Images (*.png *.bmp *.jpg)" );
     if( file_name != "" )
     {
-    	// Set the directory of the opened file as the default directory in the application settings
+    	// Save the chosen folder as the default in the application settings
     	QDir current_dir;
         app_settings.setValue(default_dir_key, current_dir.absoluteFilePath(file_name));
 
         // Load the chosen file as the unprocessed image
         QImage* image = new QImage;
         image->load( file_name );
-        mImageContainer->setPixmap( QPixmap::fromImage( *image ) );
-        mImageContainer->adjustSize();
+
+        // Update the current image to this image
+        UpdateCurrentImage( *image );
+
+        // Pass ownership of the image to the filter processing thread
         mFilterProcessingThread->SetImage( image );
+
+        // Resize window to fit new image
         Resize();
     }
 }
@@ -133,12 +115,77 @@ MainWindow::Save()
 
 void
 MainWindow::ApplyCurrentFilter()
+///
+/// Sets up parameter values and triggers processing via the filter processing thread.
+///
+/// @return
+///  Nothing
+///
 {
 	mFilterProcessingThread->BeginProcessing();
 }
 
 void
+MainWindow::LayeredStrokesStateChange( bool state )
+///
+/// Receives state changes from a GUI element and toggles the layered strokes
+/// filter accordingly.
+///
+/// @param state
+///  True if the filter has been toggled on. False otherwise.
+///
+/// @return
+///  Nothing
+///
+{
+    mLayeredStrokesEnabled = state;
+    emit LayeredStrokesToggled( mLayeredStrokesEnabled );
+}
+
+void
+MainWindow::PointillismStateChange( bool state )
+///
+/// Receives state changes from a GUI element and toggles the pointillism
+/// filter accordingly.
+///
+/// @param state
+///  True if the filter has been toggled on. False otherwise.
+///
+/// @return
+///  Nothing
+///
+{
+    mPointillismEnabled = state;
+    emit PointillismToggled( mPointillismEnabled );
+}
+
+void
+MainWindow::GlassPatternsStateChange( bool state )
+///
+/// Receives state changes from a GUI element and toggles the glass patterns
+/// filter accordingly.
+///
+/// @param state
+///  True if the filter has been toggled on. False otherwise.
+///
+/// @return
+///  Nothing
+///
+{
+    mGlassPatternsEnabled = state;
+    emit GlassPatternsToggled( mGlassPatternsEnabled );
+}
+
+void
 MainWindow::UpdateCurrentImage( QImage image )
+///
+/// Sets the pixmap displayed by the main window to a new image
+///
+/// @param image
+///  QImage that will be converted giving us the new pixmap
+///
+/// @return
+///  Nothing
 {
 	mImageContainer->setPixmap( QPixmap::fromImage( image ) );
     mImageContainer->adjustSize();
@@ -174,6 +221,15 @@ MainWindow::Center()
 
 void
 MainWindow::InitFilterControls( QLayout* layout )
+///
+/// Sets up the GUI for the sidebar containing user parameters and controls
+///
+/// @param layout
+///  Pointer to the layout the new controls are to be added to
+///
+/// @return
+///  Nothing
+///
 {
 	QCheckBox* checkbox1 = new QCheckBox(tr("Layered Strokes"));
 	QCheckBox* checkbox2 = new QCheckBox(tr("Pointilism"));
@@ -194,11 +250,54 @@ MainWindow::InitFilterControls( QLayout* layout )
 							  QCheckBox::indicator:unchecked:hover { image: url(:/images/layered-strokes-hover.png); } \
 							  QCheckBox::indicator:checked { image: url(:/images/layered-strokes-checked.png); }");
 
-	//layout->addWidget(checkbox1);
-	//layout->addWidget(checkbox2);
-	//layout->addWidget(checkbox3);
+	layout->addWidget(checkbox1);
+	layout->addWidget(checkbox2);
+	layout->addWidget(checkbox3);
+    
+    // Set up the checkboxes to change the state of the filters
+    connect( checkbox1, SIGNAL( toggled(bool) ), this, SLOT( LayeredStrokesStateChange(bool) ) );
+    connect( checkbox2, SIGNAL( toggled(bool) ), this, SLOT( PointillismStateChange(bool) ) );
+    connect( checkbox3, SIGNAL( toggled(bool) ), this, SLOT( GlassPatternsStateChange(bool) ) );
+    
+    // Set up the checkboxes to receive state changes from the main window
+    connect( this, SIGNAL( LayeredStrokesToggled(bool) ), checkbox1, SLOT( setChecked(bool) ) );
+    connect( this, SIGNAL( PointillismToggled(bool) ), checkbox2, SLOT( setChecked(bool) ) );
+    connect( this, SIGNAL( GlassPatternsToggled(bool) ), checkbox3, SLOT( setChecked(bool) ) );
 
 	QPushButton* apply_filters_button = new QPushButton(tr("Apply Filters"));
 	connect( apply_filters_button, SIGNAL( clicked() ), this, SLOT( ApplyCurrentFilter() ) );
 	layout->addWidget(apply_filters_button);
+}
+
+void
+MainWindow::InitMenuBar()
+///
+/// Initializes the menu bar and it's actions
+///
+/// @return
+///  Nothing
+///
+{
+	mOpenAction = new QAction( tr("&Open"), this );
+	mSaveAction = new QAction( tr("&Save"), this );	
+
+	///
+	/// Ghost out actions that need an image to be loaded and connect these
+	/// actions so they turn back on when the results widget sets an image sucessfully.
+	///
+	mSaveAction->setDisabled( true );
+	//connect( mMainImagePane, SIGNAL( ImageLoaded(bool) ), mSaveAction, SLOT( setEnabled(bool) ) );
+
+	///
+	/// Connect the actions to their slots in mMainImagePane
+	///
+	connect( mOpenAction, SIGNAL( triggered() ), this, SLOT( Open() ) );
+	connect( mSaveAction, SIGNAL( triggered() ), this, SLOT( Save() ) );
+
+	///
+	/// Add the actions to the menu
+	///
+	mFileMenu = menuBar()->addMenu( tr("&File") );
+	mFileMenu->addAction( mOpenAction );
+	mFileMenu->addAction( mSaveAction );
 }

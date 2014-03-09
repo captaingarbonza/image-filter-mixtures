@@ -22,9 +22,19 @@ class MainWindow : public QMainWindow
     	void Save();
     	void ApplyCurrentFilter();
     	void UpdateCurrentImage( QImage image );
+    
+        void LayeredStrokesStateChange( bool state );
+        void PointillismStateChange( bool state );
+        void GlassPatternsStateChange( bool state );
+    
+    signals:
+        void LayeredStrokesToggled( bool enabled );
+        void PointillismToggled( bool enabled );
+        void GlassPatternsToggled( bool enabled );
 
 	private:
 		void InitFilterControls( QLayout* layout );
+		void InitMenuBar();
 
 		FilterProcessingThread* mFilterProcessingThread;
 
