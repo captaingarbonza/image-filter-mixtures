@@ -140,6 +140,7 @@ MainWindow::LayeredStrokesStateChange( bool state )
 {
     mLayeredStrokesEnabled = state;
     emit LayeredStrokesToggled( mLayeredStrokesEnabled );
+    UpdateFilterGhostedStates();
 }
 
 void
@@ -157,6 +158,7 @@ MainWindow::PointillismStateChange( bool state )
 {
     mPointillismEnabled = state;
     emit PointillismToggled( mPointillismEnabled );
+    UpdateFilterGhostedStates();
 }
 
 void
@@ -174,6 +176,24 @@ MainWindow::GlassPatternsStateChange( bool state )
 {
     mGlassPatternsEnabled = state;
     emit GlassPatternsToggled( mGlassPatternsEnabled );
+    UpdateFilterGhostedStates();
+}
+
+void
+MainWindow::UpdateFilterGhostedStates()
+///
+/// Updates filter controls to disable the last filter if two have already
+/// been selected and reenable filters if a filter has been deselected.
+/// Emits signals to the GUI to reflect this state.
+///
+/// @return
+///  Nothing
+///
+{
+    // A filter is ghosted if both other filters are selected.
+    emit LayeredStrokesUnghosted( !( mPointillismEnabled && mGlassPatternsEnabled ) );
+    emit PointillismUnghosted( !( mLayeredStrokesEnabled && mGlassPatternsEnabled ) );
+    emit GlassPatternsUnghosted( !( mLayeredStrokesEnabled && mPointillismEnabled ) );
 }
 
 void
@@ -263,6 +283,11 @@ MainWindow::InitFilterControls( QLayout* layout )
     connect( this, SIGNAL( LayeredStrokesToggled(bool) ), checkbox1, SLOT( setChecked(bool) ) );
     connect( this, SIGNAL( PointillismToggled(bool) ), checkbox2, SLOT( setChecked(bool) ) );
     connect( this, SIGNAL( GlassPatternsToggled(bool) ), checkbox3, SLOT( setChecked(bool) ) );
+    
+    // Connect checkboxes so they can be ghosted out if too many are selected
+    connect( this, SIGNAL( LayeredStrokesUnghosted(bool) ), checkbox1, SLOT( setEnabled(bool) ) );
+    connect( this, SIGNAL( PointillismUnghosted(bool) ), checkbox2, SLOT( setEnabled(bool) ) );
+    connect( this, SIGNAL( GlassPatternsUnghosted(bool) ), checkbox3, SLOT( setEnabled(bool) ) );
 
 	QPushButton* apply_filters_button = new QPushButton(tr("Apply Filters"));
 	connect( apply_filters_button, SIGNAL( clicked() ), this, SLOT( ApplyCurrentFilter() ) );

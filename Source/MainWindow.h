@@ -16,6 +16,8 @@ class MainWindow : public QMainWindow
 
 		void Resize();
 		void Center();
+    
+        void UpdateFilterGhostedStates();
 
 	public slots:
     	void Open();
@@ -31,6 +33,10 @@ class MainWindow : public QMainWindow
         void LayeredStrokesToggled( bool enabled );
         void PointillismToggled( bool enabled );
         void GlassPatternsToggled( bool enabled );
+    
+        void LayeredStrokesUnghosted( bool ghosted );
+        void PointillismUnghosted( bool ghosted );
+        void GlassPatternsUnghosted( bool ghosted );
 
 	private:
 		void InitFilterControls( QLayout* layout );
