@@ -8,15 +8,23 @@ const int LayeredStrokesFilter::MAXIMUM_POSSIBLE_BRUSH_SIZE = 100;
 const int LayeredStrokesFilter::MINIMUM_FIDELITY_THRESHOLD = 0;
 const int LayeredStrokesFilter::MAXIMUM_FIDELITY_THRESHOLD = 600;
 
-void RunFilter(QImage* source, QImage* destination, int max_brush_size, int min_brush_size, int error_threshold);
-void DrawBrushStroke(QImage* source, QImage* destination, QPoint position, QColor color, int radius, int z_depth, uchar* depth_buffer, int max_stroke_length);
-void DrawCircle(QImage* canvas, QPoint position, QColor color, int radius, int z_depth, uchar* depth_buffer);
-void DrawHorizontalLine(QImage* canvas, int x_left, int x_right, int y, QColor color, int z_depth, uchar* depth_buffer);
+static void RunLayeredStrokesFilter(QImage* source, QImage* destination, int max_brush_size, int min_brush_size, int error_threshold);
+static void DrawBrushStroke(QImage* source, QImage* destination, QPoint position, QColor color, int radius, int z_depth, uchar* depth_buffer, int max_stroke_length);
+static void DrawCircle(QImage* canvas, QPoint position, QColor color, int radius, int z_depth, uchar* depth_buffer);
+static void DrawHorizontalLine(QImage* canvas, int x_left, int x_right, int y, QColor color, int z_depth, uchar* depth_buffer);
 
 double ColorDistance( QColor color1, QColor color2);
 
+LayeredStrokesFilter::LayeredStrokesFilter()
+///
+/// Constructor
+///
+{
+
+}
+
 QImage*
-RunLayeredStrokesFilter( QImage* source )
+LayeredStrokesFilter::RunFilter( QImage* source )
 ///
 /// Filter function that is externally visible. Translates parameters into a form
 /// that the algorithm understands and kicks off the algorithm.
@@ -41,37 +49,37 @@ RunLayeredStrokesFilter( QImage* source )
 	/// Extract relevant parameters from the parameter list and set any that aren't
 	/// available to their defaults.
 	///
-	int max_brush_size = LayeredStrokesFilter::MAX_BRUSH_SIZE_DEFAULT;
-	int min_brush_size = LayeredStrokesFilter::MIN_BRUSH_SIZE_DEFAULT;
-	int fidelity_threshold = LayeredStrokesFilter::FIDELITY_THRESHOLD_DEFAULT;
+	int max_brush_size = MAX_BRUSH_SIZE_DEFAULT;
+	int min_brush_size = MIN_BRUSH_SIZE_DEFAULT;
+	int fidelity_threshold = FIDELITY_THRESHOLD_DEFAULT;
 
 	///
 	/// Make sure the parameters are within the allowed range for their parameter type.
 	///
-	max_brush_size = max_brush_size > LayeredStrokesFilter::MAXIMUM_POSSIBLE_BRUSH_SIZE ? 
-		max_brush_size = LayeredStrokesFilter::MAXIMUM_POSSIBLE_BRUSH_SIZE : 
-		( max_brush_size < LayeredStrokesFilter::MINIMUM_POSSIBLE_BRUSH_SIZE ? 
-		LayeredStrokesFilter::MAXIMUM_POSSIBLE_BRUSH_SIZE : max_brush_size );
-	min_brush_size = min_brush_size > LayeredStrokesFilter::MAXIMUM_POSSIBLE_BRUSH_SIZE ? 
-		min_brush_size = LayeredStrokesFilter::MAXIMUM_POSSIBLE_BRUSH_SIZE : 
-		( min_brush_size < LayeredStrokesFilter::MINIMUM_POSSIBLE_BRUSH_SIZE ? 
-		LayeredStrokesFilter::MAXIMUM_POSSIBLE_BRUSH_SIZE : min_brush_size );
+	max_brush_size = max_brush_size > MAXIMUM_POSSIBLE_BRUSH_SIZE ? 
+		max_brush_size = MAXIMUM_POSSIBLE_BRUSH_SIZE : 
+		( max_brush_size < MINIMUM_POSSIBLE_BRUSH_SIZE ? 
+		MAXIMUM_POSSIBLE_BRUSH_SIZE : max_brush_size );
+	min_brush_size = min_brush_size > MAXIMUM_POSSIBLE_BRUSH_SIZE ? 
+		min_brush_size = MAXIMUM_POSSIBLE_BRUSH_SIZE : 
+		( min_brush_size < MINIMUM_POSSIBLE_BRUSH_SIZE ? 
+		MAXIMUM_POSSIBLE_BRUSH_SIZE : min_brush_size );
 	min_brush_size = min_brush_size > max_brush_size ? max_brush_size : min_brush_size;
-	fidelity_threshold = fidelity_threshold > LayeredStrokesFilter::MAXIMUM_FIDELITY_THRESHOLD ?
-		LayeredStrokesFilter::MAXIMUM_FIDELITY_THRESHOLD :
-		( fidelity_threshold < LayeredStrokesFilter::MINIMUM_FIDELITY_THRESHOLD ?
-		LayeredStrokesFilter::MINIMUM_FIDELITY_THRESHOLD : fidelity_threshold );
+	fidelity_threshold = fidelity_threshold > MAXIMUM_FIDELITY_THRESHOLD ?
+		MAXIMUM_FIDELITY_THRESHOLD :
+		( fidelity_threshold < MINIMUM_FIDELITY_THRESHOLD ?
+		MINIMUM_FIDELITY_THRESHOLD : fidelity_threshold );
 
 	///
 	/// Run the filter
 	///
     QImage* canvas = new QImage(source->size(), QImage::Format_ARGB32);
-	RunFilter( source, canvas, max_brush_size, min_brush_size, fidelity_threshold );
+	RunLayeredStrokesFilter( source, canvas, max_brush_size, min_brush_size, fidelity_threshold );
     return canvas;
 }
 
 void 
-RunFilter(QImage* source, QImage* destination, int max_brush_size, int min_brush_size, int error_threshold)
+RunLayeredStrokesFilter(QImage* source, QImage* destination, int max_brush_size, int min_brush_size, int error_threshold)
 ///
 /// Runs a filter that creates a painted image by building up a series of curved brush strokes
 /// that approximate the reference image. Use three different brush sizes, a minimum, a maximum,

@@ -8,6 +8,6 @@ class Filter
 {
 	public:
 		virtual ~Filter() {}
-		virtual void RunFilter( QImage* source, QImage* destination ) = 0;
+		virtual QImage* RunFilter( QImage* source ) = 0;
 };
 #endif

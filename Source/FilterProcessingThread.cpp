@@ -1,5 +1,4 @@
 #include "FilterProcessingThread.h"
-#include "Filters/LayeredStrokesFilter.h"
 
 FilterProcessingThread::FilterProcessingThread(QObject *parent)
 ///
@@ -9,7 +8,8 @@ FilterProcessingThread::FilterProcessingThread(QObject *parent)
   mAbort( false ),
   mOriginalImage( NULL ),
   mCanvas( NULL ),
-  mFilterReady( false )
+  mFilterReady( false ),
+  mFilter( NULL )
 {
     start();
 }
@@ -53,7 +53,7 @@ FilterProcessingThread::run()
         if( mAbort )
             break;
 
-		if( mOriginalImage == NULL || !mFilterReady )
+		if( mOriginalImage == NULL || mFilter == NULL )
 		{
             // We are not ready to filter so put the thread to sleep
             QMutexLocker locker(&mutex);
@@ -67,8 +67,12 @@ FilterProcessingThread::run()
             {
                 delete mCanvas;
             }
-			mCanvas = RunLayeredStrokesFilter( mOriginalImage );
-			mFilterReady = false;
+            //Filter* filter = new LayeredStrokesFilter();
+			mCanvas = mFilter->RunFilter( mOriginalImage );
+            delete mFilter;
+            mFilter = NULL;
+            //delete filter;
+			//mFilterReady = false;
 		}
         // Pass the processed canvas to anyone who is interested
 		emit FilterProcessingComplete( *mCanvas );
@@ -97,7 +101,7 @@ FilterProcessingThread::SetImage( QImage* image )
 }
 
 void 
-FilterProcessingThread::BeginProcessing()
+FilterProcessingThread::BeginProcessing( Filter* filter )
 ///
 /// Starts the processing thread.
 ///
@@ -106,6 +110,6 @@ FilterProcessingThread::BeginProcessing()
 ///
 {
     QMutexLocker locker(&mutex);
-    mFilterReady = true;
+    mFilter = filter;
     condition.wakeOne();
 }

@@ -45,13 +45,10 @@ class MainWindow : public QMainWindow
 
 		FilterProcessingThread* mFilterProcessingThread;
 
-		/// Or could have an enum of filter types and store the ones that are enabled. If more than two, ghost others out.
-		/// Objects could store filter id? Overkill?
 		bool mLayeredStrokesEnabled;
 		bool mPointillismEnabled;
 		bool mGlassPatternsEnabled;
 
-		//QImage* mOriginalImage;
 		QScrollArea* mScrollArea;
 		QLabel* mImageContainer;
 

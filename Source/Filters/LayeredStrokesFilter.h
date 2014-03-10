@@ -3,7 +3,7 @@
 
 #include "Filter.h"
 
-class LayeredStrokesFilter
+class LayeredStrokesFilter: public Filter
 {
 	public:
 		static const int MAX_BRUSH_SIZE_DEFAULT;
@@ -13,8 +13,10 @@ class LayeredStrokesFilter
 		static const int MAXIMUM_POSSIBLE_BRUSH_SIZE;
 		static const int MINIMUM_FIDELITY_THRESHOLD;
 		static const int MAXIMUM_FIDELITY_THRESHOLD;
-};
 
-QImage* RunLayeredStrokesFilter( QImage* source );
+		LayeredStrokesFilter();
+
+		QImage* RunFilter( QImage* source );
+};
 
 #endif

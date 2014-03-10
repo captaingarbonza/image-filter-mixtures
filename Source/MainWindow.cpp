@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+//#include "LayeredStrokesFilter.h"
 
 MainWindow::MainWindow()
 ///
@@ -100,7 +101,7 @@ MainWindow::ApplyCurrentFilter()
 ///  Nothing
 ///
 {
-	mFilterProcessingThread->BeginProcessing();
+	mFilterProcessingThread->BeginProcessing( new LayeredStrokesFilter() );
 }
 
 void
