@@ -10,14 +10,6 @@ class FilterProcessingThread : public QThread
 {
 	Q_OBJECT
 
-	enum FilterType 
-	{
-		LAYERED_STROKES,
-		POINTILLISM,
-		GLASS_PATTERNS,
-		NO_FILTER
-	};
-
 	public:
 	    FilterProcessingThread(QObject *parent = 0);
 	    ~FilterProcessingThread();
@@ -41,7 +33,6 @@ class FilterProcessingThread : public QThread
 	    QImage* mOriginalImage;
 	    QImage* mCanvas;
 
-	    bool mFilterReady;
 	    Filter* mFilter;
 };
 

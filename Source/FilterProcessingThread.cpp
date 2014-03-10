@@ -8,7 +8,6 @@ FilterProcessingThread::FilterProcessingThread(QObject *parent)
   mAbort( false ),
   mOriginalImage( NULL ),
   mCanvas( NULL ),
-  mFilterReady( false ),
   mFilter( NULL )
 {
     start();
@@ -67,12 +66,9 @@ FilterProcessingThread::run()
             {
                 delete mCanvas;
             }
-            //Filter* filter = new LayeredStrokesFilter();
 			mCanvas = mFilter->RunFilter( mOriginalImage );
             delete mFilter;
             mFilter = NULL;
-            //delete filter;
-			//mFilterReady = false;
 		}
         // Pass the processed canvas to anyone who is interested
 		emit FilterProcessingComplete( *mCanvas );
