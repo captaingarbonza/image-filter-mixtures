@@ -2,7 +2,6 @@
 #define _FILTER_PROCESSING_THREAD_H_
 
 #include <QtGui>
-#include "Filters/LayeredStrokesFilter.h"
 
 class Filter;
 
@@ -20,6 +19,7 @@ class FilterProcessingThread : public QThread
 	signals:
         void ImageLoaded( bool loaded);
 	    void FilterProcessingComplete( QImage result );
+	    void FilterStatus( QString status_text );
 
 	protected:
 	    void run();

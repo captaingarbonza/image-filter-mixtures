@@ -5,6 +5,7 @@
 #include <QtWidgets>
 
 #include "FilterProcessingThread.h"
+#include "Filters/LayeredStrokesFilter.h"
 
 class MainWindow : public QMainWindow
 {
@@ -28,6 +29,8 @@ class MainWindow : public QMainWindow
         void LayeredStrokesStateChange( bool state );
         void PointillismStateChange( bool state );
         void GlassPatternsStateChange( bool state );
+
+        void StatusBarUpdated( QString status_text );
     
     signals:
         void LayeredStrokesToggled( bool enabled );
@@ -51,6 +54,8 @@ class MainWindow : public QMainWindow
 
 		QScrollArea* mScrollArea;
 		QLabel* mImageContainer;
+
+		QLabel* mStatusText;
 
 		QMenu* mFileMenu;
 

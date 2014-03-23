@@ -29,6 +29,10 @@ MainWindow::MainWindow()
 	mCentralWidget->setMinimumSize( mScrollArea->minimumWidth() + mOptionsWidget->minimumWidth(), mOptionsWidget->minimumHeight() );
 	setCentralWidget( mCentralWidget );
 	setMinimumSize( mCentralWidget->minimumSize() );
+
+	mStatusText = new QLabel;
+	statusBar()->addWidget(mStatusText);
+	connect( mFilterProcessingThread, SIGNAL( FilterStatus(QString) ), this, SLOT( StatusBarUpdated(QString) ) );
 }
 
 MainWindow::~MainWindow()
@@ -101,6 +105,7 @@ MainWindow::ApplyCurrentFilter()
 ///  Nothing
 ///
 {
+	StatusBarUpdated( QString("Processing...") );
 	mFilterProcessingThread->BeginProcessing( new LayeredStrokesFilter() );
 }
 
@@ -188,6 +193,12 @@ MainWindow::UpdateCurrentImage( QImage image )
 {
 	mImageContainer->setPixmap( QPixmap::fromImage( image ) );
     mImageContainer->adjustSize();
+}
+
+void
+MainWindow::StatusBarUpdated( QString status_text )
+{
+	mStatusText->setText( status_text );
 }
 
 void

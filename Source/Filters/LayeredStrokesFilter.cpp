@@ -1,4 +1,6 @@
 #include "LayeredStrokesFilter.h"
+#include "HelperFunctions/Drawing.h"
+#include "HelperFunctions/ImageProcessing.h"
 
 const int LayeredStrokesFilter::MAX_BRUSH_SIZE_DEFAULT = 7;
 const int LayeredStrokesFilter::MIN_BRUSH_SIZE_DEFAULT = 2;
@@ -10,10 +12,6 @@ const int LayeredStrokesFilter::MAXIMUM_FIDELITY_THRESHOLD = 600;
 
 static void RunLayeredStrokesFilter(QImage* source, QImage* destination, int max_brush_size, int min_brush_size, int error_threshold);
 static void DrawBrushStroke(QImage* source, QImage* destination, QPoint position, QColor color, int radius, int z_depth, uchar* depth_buffer, int max_stroke_length);
-static void DrawCircle(QImage* canvas, QPoint position, QColor color, int radius, int z_depth, uchar* depth_buffer);
-static void DrawHorizontalLine(QImage* canvas, int x_left, int x_right, int y, QColor color, int z_depth, uchar* depth_buffer);
-
-double ColorDistance( QColor color1, QColor color2);
 
 LayeredStrokesFilter::LayeredStrokesFilter()
 ///
@@ -150,8 +148,10 @@ RunLayeredStrokesFilter(QImage* source, QImage* destination, int max_brush_size,
 		/// Blur image using gaussian blurring, relative to the brush size
 		///
 		int blur_kernel = current_brush_size%2 == 0 ? current_brush_size + 1 : current_brush_size;
-		// @todo: add blur algorithm
-		*reference_image = *source;
+		uchar* blurred_data = new uchar[source->width()*source->height()*4];
+		ImageProcessing::GaussianBlur(source->bits(), blurred_data, source->width(), source->height(), 4, blur_kernel );
+		*reference_image = QImage(blurred_data, source->width(), source->height(), source->format());
+		delete [] blurred_data;
 
 		///
 		/// For each position on a grid with spacing relative to the current brush size
@@ -182,7 +182,7 @@ RunLayeredStrokesFilter(QImage* source, QImage* destination, int max_brush_size,
 					{
 						QColor canvas_color = QColor(destination->pixel(i, j));
 						QColor reference_color = QColor(reference_image->pixel(i, j));
-						double new_diff = ColorDistance(canvas_color, reference_color);
+						double new_diff = ImageProcessing::ColorDistance(canvas_color, reference_color);
 
 						total_error += new_diff;
 						if( new_diff > max_error ) 
@@ -265,7 +265,7 @@ DrawBrushStroke(QImage* source, QImage* destination, QPoint position, QColor col
 
 	///
 	/// Draw a circle at the first point.
-	DrawCircle(destination, position, color, radius, z_depth, depth_buffer);
+	Drawing::DrawCircle(destination, position, color, radius, z_depth, depth_buffer);
 
 	float x = position.x();
 	float y = position.y();
@@ -347,8 +347,8 @@ DrawBrushStroke(QImage* source, QImage* destination, QPoint position, QColor col
 		///
 		QColor reference_color = QColor(source->pixel((int)x, (int)y));
 		QColor canvas_color = QColor(destination->pixel((int)x, (int)y));
-		double canvas_color_error = ColorDistance(reference_color, canvas_color);
-		double stroke_color_error = ColorDistance(reference_color, color);
+		double canvas_color_error = ImageProcessing::ColorDistance(reference_color, canvas_color);
+		double stroke_color_error = ImageProcessing::ColorDistance(reference_color, color);
 
 		///
 		/// Break if the canvas is a better approximation of the reference image at this point
@@ -362,141 +362,6 @@ DrawBrushStroke(QImage* source, QImage* destination, QPoint position, QColor col
 		///
 		/// Draw a circle at the control point.
 		///
-		DrawCircle(destination, QPoint(x, y), color, radius, z_depth, depth_buffer);
+		Drawing::DrawCircle(destination, QPoint(x, y), color, radius, z_depth, depth_buffer);
 	}
-}
-
-void 
-DrawHorizontalLine(QImage* canvas, int x_left, int x_right, int y, QColor color, int z_depth, uchar* depth_buffer) 
-///
-/// Draws a horizontal line on the canvas. Also stores the points on the line in the given depth buffer.
-///
-/// @param canvas
-///  The image to paint the horizontal line onto.
-///
-/// @param x_left
-///  The left most x point of the line.
-///
-/// @param x_right
-///  The right most x point of the line.
-///
-/// @param y
-///  The vertical position of the line.
-///
-/// @param color
-///  The color of the line.
-///
-/// @param z_depth
-///  The depth of the line in relation to any other lines that are drawn.
-///
-/// @param depth_buffer
-///  The depth buffer to determine which point on the line should be drawn.
-///
-/// @return
-///  Nothing
-///
-{
-	
-	if(y >= 0 && y < canvas->height()) 
-	{
-		if(x_left > x_right) 
-		{
-			int temp = x_left;
-			x_left = x_right;
-			x_right = temp;
-		}
-		
-		while(x_left <= x_right) 
-		{
-			if(x_left >= canvas->width())
-			{
-				break;
-			}
-			
-			if(x_left >= 0 && z_depth > depth_buffer[y*canvas->width() + x_left]) 
-			{
-				canvas->setPixel(QPoint(x_left, y), qRgb(color.red(), color.green(), color.blue()));
-				depth_buffer[y*canvas->width() + x_left] = z_depth;
-			}
-			
-			++x_left;
-		}
-	}
-}
-
-void 
-DrawCircle(QImage* canvas, QPoint position, QColor color, int radius, int z_depth, uchar* depth_buffer) 
-///
-/// Draw a circle of a given color and radius on the given canvas.
-///
-/// @param canvas
-///  The canvas to draw the circle on to.
-///
-/// @param position
-///  The center point of the circle to be drawn.
-///
-/// @param color
-///  The color of the circle to be drawn.
-///
-/// @param radius
-///  The radius of the circle to be drawn.
-///
-/// @param z_depth
-///  The depth of the circle being drawn within the depth buffer.
-///
-/// @param depth_buffer
-///  The depth buffer to determine which pixels should be drawn.
-///
-/// @return
-///  Nothing
-///
-{
-	int x = -1;
-	int y = radius;
-	int d = 1 - radius;
-	int delta_e = -1;
-	int delta_se = (-radius << 1) + 3;
-
-	while (y > x) 
-	{
-		delta_e += 2;
-		x++;
-
-		if (d < 0) 
-		{
-			d += delta_e;
-			delta_se += 2;
-		} 
-		else 
-		{
-			d += delta_se;
-			delta_se += 4;
-			y--;
-		}
-
-		DrawHorizontalLine(canvas, position.x() + x, position.x() - x, position.y() + y, color, z_depth, depth_buffer);
-		DrawHorizontalLine(canvas, position.x() + y, position.x() - y, position.y() + x, color, z_depth, depth_buffer);
-		DrawHorizontalLine(canvas, position.x() + y, position.x() - y, position.y() - x, color, z_depth, depth_buffer);
-		DrawHorizontalLine(canvas, position.x() + x, position.x() - x, position.y() - y, color, z_depth, depth_buffer);
-	}
-}
-
-double absolute( double x)
-{
-	if( x >= 0) return x;
-	else return -1.0*x;
-}
-
-double 
-ColorDistance( QColor color1, QColor color2)
-///
-/// Just a simple rgb comparison at the moment, but is that the best way?
-///
-/// @todo: Research alternative color comparisons.
-///  http://www.compuphase.com/cmetric.htm
-///
-{
-	return absolute(	(color1.red() - color2.red())*(color1.red() - color2.red()) +
-						(color1.green() - color2.green())*(color1.green() - color2.green()) +
-						(color1.blue() - color2.blue())*(color1.blue() - color2.blue())	);
 }

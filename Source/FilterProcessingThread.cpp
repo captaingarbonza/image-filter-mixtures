@@ -1,4 +1,5 @@
 #include "FilterProcessingThread.h"
+#include "Filter.h"
 
 FilterProcessingThread::FilterProcessingThread(QObject *parent)
 ///
@@ -72,6 +73,7 @@ FilterProcessingThread::run()
 		}
         // Pass the processed canvas to anyone who is interested
 		emit FilterProcessingComplete( *mCanvas );
+        emit FilterStatus( QString("Done!") );
     }
 }
 
@@ -100,6 +102,9 @@ void
 FilterProcessingThread::BeginProcessing( Filter* filter )
 ///
 /// Starts the processing thread.
+///
+/// @param filter
+///  The filter to be applied to the base image. Will be deleted after processing.
 ///
 /// @return
 ///  Nothing
