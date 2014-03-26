@@ -3,11 +3,11 @@ image-filter-mixtures
 
 Applies combinations of different image filters to a photography in order to simulate a user defined painting style.
 
-* Only one test filter added at present to get the GUI up and running
+* Combinations are not working yet but two of the separate filters are ready to go.
 
 TODO:
 * Progress bar
-* Add Glass Patterns and Pointilism filters
+* Add the Glass Patterns filter
 * Add combination filters and hook up to complete GUI
 * Optimize filter processing
 * Menu options
@@ -22,3 +22,5 @@ Dependencies
 ----------
 
 Requires Qt to run. Tested on version 5.2.1. For download and instalation instructions visit: http://qt-project.org/
+
+Requires Boost. Tested version 1.55.0. For download and installation instructions visit: http://www.boost.org/
