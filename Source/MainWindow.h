@@ -4,8 +4,7 @@
 #include <QApplication>
 #include <QtWidgets>
 
-#include "FilterProcessingThread.h"
-#include "Filters/LayeredStrokesFilter.h"
+#include "FilterProcessor.h"
 
 class MainWindow : public QMainWindow
 {
@@ -24,7 +23,17 @@ class MainWindow : public QMainWindow
     	void Open();
     	void Save();
     	void ApplyCurrentFilter();
-    	void UpdateCurrentImage( QImage image );
+    	void LoadImage( QImage image );
+
+    	///
+    	/// Temporary slots until there is enough functionality to use the checkboxes properly
+    	///
+    	void ApplyLayeredStrokes();
+    	void ApplyPointillism();
+    	void ApplyGlassPatterns();
+
+    	void Undo();
+    	void Redo();
     
         void LayeredStrokesStateChange( bool state );
         void PointillismStateChange( bool state );
@@ -33,6 +42,10 @@ class MainWindow : public QMainWindow
         void StatusBarUpdated( QString status_text );
     
     signals:
+        void UndoIsActive(bool active);
+    	void RedoIsActive(bool active);
+    	void ImageLoaded(bool loaded);
+
         void LayeredStrokesToggled( bool enabled );
         void PointillismToggled( bool enabled );
         void GlassPatternsToggled( bool enabled );
@@ -42,11 +55,18 @@ class MainWindow : public QMainWindow
         void GlassPatternsUnghosted( bool ghosted );
 
 	private:
+		void UpdateVisibleImage( QImage image );
+		void UpdateEditMenuStates();
+
         void InitImagePane( QLayout* layout );
 		void InitFilterControls( QLayout* layout );
 		void InitMenuBar();
 
-		FilterProcessingThread* mFilterProcessingThread;
+		FilterProcessor* mFilterProcessor;
+
+		QImage* mCurrentImage;
+		QImage* mPreviousImage;
+		QImage* mNextImage;
 
 		bool mLayeredStrokesEnabled;
 		bool mPointillismEnabled;
@@ -58,9 +78,13 @@ class MainWindow : public QMainWindow
 		QLabel* mStatusText;
 
 		QMenu* mFileMenu;
+		QMenu* mEditMenu;
 
 		QAction* mOpenAction;
 		QAction* mSaveAction;
+
+		QAction* mUndoAction;
+		QAction* mRedoAction;
 
 		QWidget* mCentralWidget;
 		QWidget* mOptionsWidget;

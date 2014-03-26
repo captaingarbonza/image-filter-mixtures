@@ -25,6 +25,8 @@ class ImageProcessing
 
 		static void ConvertToOneChannel( uchar* source, uchar* destination, int width, int height, int channels = 4, int alpha_channel = 3);
 		static void ConvertFromOneChannel( uchar* source, uchar* destination, int width, int height, int channels = 4, int alpha_channel = 3);
+		//static void RGBToHSV( double r, double g, double b, double* hue, double* sat, double* val );
+		//static void HSVToRGB( double hue, double sat, double val, double* r, double* g, double* b );
 
 		static void AddImages(uchar* image1, uchar* image2, uchar* result, int width, int height, int channels = 4);
 };

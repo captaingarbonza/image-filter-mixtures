@@ -5,10 +5,19 @@
 double 
 ImageProcessing::ColorDistance( QColor color1, QColor color2)
 ///
-/// Just a simple rgb comparison at the moment, but is that the best way?
+/// A simple rgb distance comparison to compare color distance.
 ///
-/// @todo: Research alternative color comparisons.
+/// @todo [crystal] Research alternative color comparisons.
 ///  http://www.compuphase.com/cmetric.htm
+///
+/// @param color1
+///  The first color to be compared.
+///
+/// @param color2
+///  The second color to be compared.
+///
+/// @return
+///  Nothing.
 ///
 {
 	return abs(	(color1.red() - color2.red())*(color1.red() - color2.red()) +
@@ -17,7 +26,7 @@ ImageProcessing::ColorDistance( QColor color1, QColor color2)
 }
 
 std::vector<QPoint> 
-ImageProcessing::GetPoissonDisks(int width, int height, int minDist) 
+ImageProcessing::GetPoissonDisks(int width, int height, int min_dist) 
 ///
 /// Takes a poisson sampling (a set of randomized points over an area that
 /// are a given minimum distance appart) of a given width and height.
@@ -28,7 +37,7 @@ ImageProcessing::GetPoissonDisks(int width, int height, int minDist)
 /// @param height
 ///  The height of the poisson sampling area.
 ///
-/// @param minDist
+/// @param min_dist
 ///  The minimum distance between sampled points.
 ///
 /// @return
@@ -37,94 +46,113 @@ ImageProcessing::GetPoissonDisks(int width, int height, int minDist)
 {
 
 	const double root2 = 1.414214;
-	const double pi = 3.14159265;
 	const int k = 30;
 
 	// Initialize data structures
-	int cellSize = (int)(minDist/root2);
-	if(cellSize < 1) cellSize = 1;
-	int gridWidth = (int)width/cellSize;
-	int gridHeight = (int)height/cellSize;
-	if(width%gridWidth != 0) gridWidth++;
-	if(height%gridHeight != 0) gridHeight++;
+	int cell_size = (int)(min_dist/root2);
+	if(cell_size < 1) cell_size = 1;
+
+	int grid_width = (int)width/cell_size;
+	int grid_height = (int)height/cell_size;
+
+	if( width%grid_width != 0 ) grid_width++;
+	if( height%grid_height != 0 ) grid_height++;
+
 	std::vector<QPoint> grid;
-	grid.resize(gridWidth*gridHeight);
-	for(int i = 0; i < grid.size(); i++) grid[i] = QPoint(-1, -1);
+	grid.resize(grid_width*grid_height);
+	for( size_t i = 0; i < grid.size(); i++)
+	{
+		grid[i] = QPoint(-1, -1);
+	} 
+
 	std::vector<QPoint> processing;
 	std::vector<QPoint> output;
-	processing.reserve(gridWidth*gridHeight);
-	output.reserve(gridWidth*gridHeight);
+	processing.reserve(grid_width*grid_height);
+	output.reserve(grid_width*grid_height);
 	
 	// Find random start point
 	// Add to the output list, processing list, and grid
 	QPoint start = QPoint(rand()%width, rand()%height);
-	grid[start.y()/cellSize*gridWidth + start.x()/cellSize] = start;
+	grid[start.y()/cell_size*grid_width + start.x()/cell_size] = start;
 	processing.push_back(start);
 	output.push_back(start);
 
 	// Poisson sampling loop
-	while(!processing.empty()) {
+	while( !processing.empty() ) 
+	{
 		// Choose a random point from the processing list
-		int getAt = rand()%processing.size();
-		QPoint nextPoint = processing[getAt];
-		for(int i = getAt; i < processing.size() - 1; i++) processing[i] = processing[i + 1];
+		int get_at = rand()%processing.size();
+		QPoint next_point = processing[get_at];
+		for( size_t i = get_at; i < processing.size() - 1; i++ )
+		{
+			processing[i] = processing[i + 1];
+		} 
 		processing.pop_back();
 
 		// For this point, generate k points around this point
-		for(int i = 0; i < k; i++) {
-
+		for( int i = 0; i < k; i++ ) 
+		{
 			// Generate a new point randomly chosen
 			// with a random angle between 0 and 2*PI
 			// and a random radius between minDist and 2*minDist
-			int radius = rand()%minDist + minDist;
+			int radius = rand()%min_dist + min_dist;
 			int temp = rand()%360;
-			double angle = temp/360.0*2*pi;
+			double angle = temp/360.0*2*PI;
 		
-			int newX = (int)(nextPoint.x() + radius * cos(angle));
-			int newY = (int)(nextPoint.y() + radius * sin(angle));
+			int new_x = (int)(next_point.x() + radius * cos(angle));
+			int new_y = (int)(next_point.y() + radius * sin(angle));
 
 			// Check that point is not too close to an existing point
 			// and that the point is within the image boundaries
 			bool valid = true;
-			if(newX < 0 || newY < 0 || newX >= width || newY >= height) {
+			if( new_x < 0 || new_y < 0 || new_x >= width || new_y >= height ) 
+			{
 				valid = false;
-			} else {
-
-				int gridX = newX/cellSize;
-				int gridY = newY/cellSize;
+			} 
+			else 
+			{
+				int grid_x = new_x/cell_size;
+				int grid_y = new_y/cell_size;
 
 				// Get surrounding cells
-				for(int y = -2; y < 3; y++) {
-					for(int x = -2; x < 3; x++) {
+				for( int y = -2; y < 3; y++ ) 
+				{
+					for( int x = -2; x < 3; x++ ) 
+					{
 						// Check valid grid point
-						if(x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) { 
+						if( x >= 0 && x < grid_width && y >= 0 && y < grid_height ) 
+						{ 
 							// Calculate point
-							QPoint temp = grid[gridX + gridY*gridWidth];
-							int tempX = temp.x() + x;
-							int tempY = temp.y() + y;
-							if(!(tempX == newX && tempY == newY) ) {
+							QPoint temp = grid[grid_y*grid_width + grid_x];
+							int temp_x = temp.x() + x;
+							int temp_y = temp.y() + y;
+							if(!(temp_x == new_x && temp_y == new_y) ) {
 								// Get the distance between this point and the point in the cell
-								int distSqrd = (newX - tempX)*(newX - tempX) + (newY - tempY)*(newY - tempY);
-								if( distSqrd < minDist*minDist ) valid = false;
+								int dist_sqrd = (new_x - temp_x)*(new_x - temp_x) + (new_y - temp_y)*(new_y - temp_y);
+								if( dist_sqrd < min_dist*min_dist )
+								{
+									valid = false;
+								} 
 							}
 						}
 					}
 				}
 			}
+
 			// If point is valid, add it as a new point
-			if(valid) {
-				grid[newY/cellSize*gridWidth + newX/cellSize] = QPoint(newX, newY);
-				output.push_back(QPoint(newX, newY));
-				processing.push_back(QPoint(newX, newY));
+			if( valid ) 
+			{
+				grid[new_y/cell_size*grid_width + new_x/cell_size] = QPoint( new_x, new_y );
+				output.push_back( QPoint( new_x, new_y ) );
+				processing.push_back( QPoint(new_x, new_y) );
 			}
-
 		}
-
 	}
+
 	processing.clear();
 	grid.clear();
-	std::vector<QPoint>().swap(processing);
-	std::vector<QPoint>().swap(grid);
+	std::vector<QPoint>().swap( processing );
+	std::vector<QPoint>().swap( grid );
 	return output;
 }
 

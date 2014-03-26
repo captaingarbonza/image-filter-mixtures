@@ -105,7 +105,7 @@ RunLayeredStrokesFilter(QImage* source, QImage* destination, int max_brush_size,
 ///
 {
 	///
-	/// @todo [crystal 30.12.2012] Add asserts for values.
+	/// @todo [crystal 30.12.2012] Add asserts for values for parameters.
 	///
 
 	///
@@ -134,13 +134,14 @@ RunLayeredStrokesFilter(QImage* source, QImage* destination, int max_brush_size,
 	uchar* depth_buffer = new uchar[source->width()*source->height()];
 
 	// Do process for each brush size
-	for(int brush_index = 0; brush_index < 3; brush_index++) 
+	for( int brush_index = 0; brush_index < 3; brush_index++ ) 
 	{
 		int current_brush_size = brushes[ brush_index ];
 		///
 		/// Clear the depth buffer
 		///
-        for(int i = 0; i < source->width()*source->height(); i++) {
+        for( int i = 0; i < source->width()*source->height(); i++ ) 
+        {
             depth_buffer[i] = 0;
         }
 
@@ -158,10 +159,11 @@ RunLayeredStrokesFilter(QImage* source, QImage* destination, int max_brush_size,
 		/// find the error between this grid point in the reference image and the canvas 
 		/// that has been painted so far. If this is greater than the error threshold
 		/// then add a new brush stroke to the depth buffer.
+		///
 		int grid_size = current_brush_size <= 1 ? 2 : current_brush_size;
-		for(int y = (int)grid_size/2; y < source->height(); y += grid_size) 
+		for(int y = (int)grid_size/2; y < source->height(); y += grid_size ) 
 		{
-			for(int x = (int)grid_size/2; x < source->width(); x += grid_size) 
+			for(int x = (int)grid_size/2; x < source->width(); x += grid_size ) 
 			{
 				const int x_min = fmax(x - grid_size/2, 0 );
 				const int x_max = fmin( x_min + grid_size + 1, source->width() );
@@ -176,9 +178,9 @@ RunLayeredStrokesFilter(QImage* source, QImage* destination, int max_brush_size,
 
 				double max_error = 0.0;
 				QPoint max_error_point;
-				for(int j = y_min; j < y_max; ++j) 
+				for( int j = y_min; j < y_max; ++j ) 
 				{
-					for(int i = x_min; i < x_max; ++i) 
+					for( int i = x_min; i < x_max; ++i ) 
 					{
 						QColor canvas_color = QColor(destination->pixel(i, j));
 						QColor reference_color = QColor(reference_image->pixel(i, j));
@@ -207,9 +209,6 @@ RunLayeredStrokesFilter(QImage* source, QImage* destination, int max_brush_size,
 					///
 					/// @todo [crystal 30.12.2012] Do we want to set the maximum stroke length manually?
 					///
-                    //
-                    // @todo [crystal 05.03.2014] Malloc error is in here somewhere.
-                    //  reference_image or destination being freed?
 					DrawBrushStroke(reference_image, destination, max_error_point, QColor(reference_image->pixel(max_error_point.x(), max_error_point.y())), current_brush_size, rand()%256, depth_buffer, brushes[0]*4);
 				}
 
@@ -276,7 +275,7 @@ DrawBrushStroke(QImage* source, QImage* destination, QPoint position, QColor col
 	/// Place control points until the stroke length reaches the maximum or the color
 	/// error with the maximum becomes too great.
 	/// 
-	for(int stroke_length_count = 0; stroke_length_count < max_stroke_length; ++stroke_length_count) 
+	for( int stroke_length_count = 0; stroke_length_count < max_stroke_length; ++stroke_length_count ) 
 	{
 		int gradient_x = 0;
 		int gradient_y = 0;
@@ -286,38 +285,35 @@ DrawBrushStroke(QImage* source, QImage* destination, QPoint position, QColor col
 		/// reference image to determine the direction of the gradient which will
 		/// tell us the current direction of the stroke.
 		///
-		int sobelX[3][3] = { {1, 0, -1}, {2, 0, -2}, {1, 0, -1} };
-		int sobelY[3][3] = { {1, 2, 1}, {0, 0, 0}, {-1, -2, -1} };
-		for(int y_incr = -1; y_incr < 2; ++y_incr) 
+		int sobel_x[3][3] = { {1, 0, -1}, {2, 0, -2}, {1, 0, -1} };
+		int sobel_y[3][3] = { {1, 2, 1}, {0, 0, 0}, {-1, -2, -1} };
+		for( int y_incr = -1; y_incr < 2; ++y_incr ) 
 		{
-			for(int x_incr = -1; x_incr < 2; ++x_incr) 
+			for( int x_incr = -1; x_incr < 2; ++x_incr ) 
 			{
 				int temp_x = (int)x + x_incr < 0 ? 0 : 
 					( (int)x + x_incr >= source->width() ? source->width() - 1 : (int)x + x_incr);
 				int temp_y = (int)y + y_incr < 0 ? 0 : 
 					( (int)y + y_incr >= source->height() ? source->height() - 1 : (int)y + y_incr );
+
 				QColor reference_color = QColor(source->pixel(temp_x, temp_y));
 				float reference_luminance = reference_color.red()*0.3 + reference_color.green()*0.59 + reference_color.blue()*0.11;
-				gradient_x += reference_luminance*sobelX[x_incr + 1][y_incr + 1];
-				gradient_y += reference_luminance*sobelY[x_incr + 1][y_incr + 1];
+
+				gradient_x += reference_luminance*sobel_x[x_incr + 1][y_incr + 1];
+				gradient_y += reference_luminance*sobel_y[x_incr + 1][y_incr + 1];
 			}
 		}
-		
-		///
-		/// Why the 255? Its an integer, this wont scale it to 256...
-		///
-		gradient_x = gradient_x*255;
-		gradient_y = gradient_y*255;
 
 		///
 		/// Calculate the position of the new control point.
 		///
-		if(control_point_distance*sqrt(gradient_x*gradient_x + gradient_y*gradient_y) >= 1) 
+		if( control_point_distance*sqrt( gradient_x*gradient_x + gradient_y*gradient_y ) >= 1 ) 
 		{
 			int new_dx = gradient_x;
 			int new_dy = -1*gradient_y;
 
-			if(stroke_length_count > 1 && new_dx*d_x + new_dy*d_y < 0) {
+			if( stroke_length_count > 1 && new_dx*d_x + new_dy*d_y < 0 ) 
+			{
 				new_dx = -1*new_dx;
 				new_dy = -1*new_dy;
 			}
@@ -329,14 +325,14 @@ DrawBrushStroke(QImage* source, QImage* destination, QPoint position, QColor col
 			break;
 		}
 
-		float length = sqrt(d_x*d_x + d_y*d_y);
-		x += control_point_distance*(d_x/length);
-		y += control_point_distance*(d_y/length);
+		float length = sqrt( d_x*d_x + d_y*d_y );
+		x += control_point_distance*( d_x/length );
+		y += control_point_distance*( d_y/length );
 		
 		///
 		/// Break if the new control point is off the edge of the canvas.
 		///
-		if(x < 0 || x >= destination->width() || y < 0 || y >= destination->height())
+		if( x < 0 || x >= destination->width() || y < 0 || y >= destination->height() )
 		{ 
 			break;
 		}
@@ -345,16 +341,16 @@ DrawBrushStroke(QImage* source, QImage* destination, QPoint position, QColor col
 		/// Calculate the color difference between the reference image and the canvas and
 		/// the reference image and the stroke at the new control point.
 		///
-		QColor reference_color = QColor(source->pixel((int)x, (int)y));
-		QColor canvas_color = QColor(destination->pixel((int)x, (int)y));
-		double canvas_color_error = ImageProcessing::ColorDistance(reference_color, canvas_color);
-		double stroke_color_error = ImageProcessing::ColorDistance(reference_color, color);
+		QColor reference_color = QColor( source->pixel((int)x, (int)y) );
+		QColor canvas_color = QColor( destination->pixel((int)x, (int)y) );
+		double canvas_color_error = ImageProcessing::ColorDistance( reference_color, canvas_color );
+		double stroke_color_error = ImageProcessing::ColorDistance( reference_color, color );
 
 		///
 		/// Break if the canvas is a better approximation of the reference image at this point
 		/// than the stroke color.
 		///
-		if(stroke_length_count >= minimum_stroke_length && canvas_color_error < stroke_color_error ) 
+		if( stroke_length_count >= minimum_stroke_length && canvas_color_error < stroke_color_error ) 
 		{
 			break;
 		}
@@ -362,6 +358,6 @@ DrawBrushStroke(QImage* source, QImage* destination, QPoint position, QColor col
 		///
 		/// Draw a circle at the control point.
 		///
-		Drawing::DrawCircle(destination, QPoint(x, y), color, radius, z_depth, depth_buffer);
+		Drawing::DrawCircle( destination, QPoint(x, y), color, radius, z_depth, depth_buffer );
 	}
 }

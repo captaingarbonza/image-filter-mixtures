@@ -1,0 +1,8 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>images/layered-strokes-checked.png</file>
+    <file>images/layered-strokes-unchecked.png</file>
+    <file>images/layered-strokes-hover.png</file>
+    <file>images/pointillism-unchecked.png</file>
+</qresource>
+</RCC>
