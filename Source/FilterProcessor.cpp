@@ -7,6 +7,7 @@
 
 #include "FilterProcessor.h"
 
+#include "Filters/GlassPatternsFilter.h"
 #include "Filters/LayeredStrokesFilter.h"
 #include "Filters/PointillismFilter.h"
 
@@ -82,6 +83,7 @@ FilterProcessor::InitFilterLibrary()
 /// @return
 ///  Nothing.
 {
+	mFilterLibrary["glass_patterns"] = filter_ptr( new GlassPatternsFilter() );
 	mFilterLibrary["layered_strokes"] = filter_ptr( new LayeredStrokesFilter() );
 	mFilterLibrary["pointillism"] = filter_ptr( new PointillismFilter() );
 }

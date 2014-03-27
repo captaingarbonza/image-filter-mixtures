@@ -874,3 +874,46 @@ ImageProcessing::AddImages(uchar *image1, uchar *image2, uchar *result, int widt
 		}
 	}
 }
+
+void
+ImageProcessing::AddImages(double *image1, double *image2, double *result, int width, int height, int channels)
+///
+/// Adds two images by adding their color components at every pixel. Values are clipped at 0 and 255.
+///
+/// @param image1
+///  The first image to be added.
+///
+/// @param image2
+///  The second image to be added.
+///
+/// @param result
+///  The image that results from adding the two images.
+///
+/// @param width
+///  The width of the images.
+///
+/// @param height
+///  The height of the images.
+///
+/// @param channels
+///  The number of color channels that the images contain. 4 by default.
+///
+/// @return
+///  Nothing.
+///
+{
+	for( int j = 0; j < height; j++ )
+	{
+		for( int i = 0; i < width; i++ )
+		{
+			for( int c = 0; c < channels; c++ )
+			{
+				int pixel = j*width*channels + i*channels + c;
+				int total = image1[pixel] + image2[pixel];
+				if( total < 0 ) total = 0;
+				if( total > 255 ) total = 255;
+				result[pixel] = total;
+			}
+		}
+	}
+}

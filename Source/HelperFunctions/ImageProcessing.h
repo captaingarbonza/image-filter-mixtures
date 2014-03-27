@@ -29,6 +29,7 @@ class ImageProcessing
 		//static void HSVToRGB( double hue, double sat, double val, double* r, double* g, double* b );
 
 		static void AddImages(uchar* image1, uchar* image2, uchar* result, int width, int height, int channels = 4);
+		static void AddImages(double* image1, double* image2, double* result, int width, int height, int channels = 4);
 };
 
 #endif

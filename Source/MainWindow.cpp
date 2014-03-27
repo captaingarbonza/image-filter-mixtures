@@ -430,13 +430,17 @@ MainWindow::InitFilterControls( QLayout* layout )
 	///
 	QPushButton* apply_layered_strokes_button = new QPushButton( QIcon(":/images/layered-strokes-unchecked.png"), QString("Layered Strokes"));
 	QPushButton* apply_pointillism_button = new QPushButton( QIcon(":/images/pointillism-unchecked.png"), QString("Pointillism"));
+	QPushButton* apply_glass_patterns_button = new QPushButton( QIcon(":/images/glass-patterns-unchecked.png"), QString("Glass Patterns"));
 	apply_layered_strokes_button->setIconSize( QSize(40, 40) );
 	apply_pointillism_button->setIconSize( QSize(40, 40) );
+	apply_glass_patterns_button->setIconSize( QSize(40, 40) );
 	connect( apply_layered_strokes_button, SIGNAL( clicked() ), this, SLOT( ApplyLayeredStrokes() ) );
 	connect( apply_pointillism_button, SIGNAL( clicked() ), this, SLOT( ApplyPointillism() ) );
+	connect( apply_glass_patterns_button, SIGNAL( clicked() ), this, SLOT( ApplyGlassPatterns() ) );
 
 	mOptionsPaneLayout->addWidget( apply_layered_strokes_button );
 	mOptionsPaneLayout->addWidget( apply_pointillism_button );
+	mOptionsPaneLayout->addWidget( apply_glass_patterns_button );
 }
 
 void
