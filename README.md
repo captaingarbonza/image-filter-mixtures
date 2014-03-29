@@ -24,3 +24,8 @@ Dependencies
 Requires Qt to run. Tested on version 5.2.1. For download and instalation instructions visit: http://qt-project.org/
 
 Requires Boost. Tested version 1.55.0. For download and installation instructions visit: http://www.boost.org/
+
+About
+----------
+
+Created by Crystal Valente

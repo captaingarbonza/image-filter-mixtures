@@ -4,9 +4,11 @@ TARGET = ImageFilterMixtures
 QT += widgets
 DESTDIR = ../Build
 RESOURCES = resources.qrc
+QMAKE_MAC_SDK=macosx
 
 HEADERS += \
 	Filter.h \
+	Filters/GlassPatternsFilter.h \
 	Filters/LayeredStrokesFilter.h \
 	Filters/PointillismFilter.h \
 	FilterProcessor.h \
@@ -15,6 +17,7 @@ HEADERS += \
 	MainWindow.h \
 
 SOURCES += \
+	Filters/GlassPatternsFilter.cpp \
 	Filters/LayeredStrokesFilter.cpp \
 	Filters/PointillismFilter.cpp \
 	FilterProcessor.cpp \
