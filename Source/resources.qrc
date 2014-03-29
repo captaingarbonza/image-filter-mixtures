@@ -1,5 +1,6 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
+	<file>images/glass-patterns-unchecked.png</file>
     <file>images/layered-strokes-checked.png</file>
     <file>images/layered-strokes-unchecked.png</file>
     <file>images/layered-strokes-hover.png</file>

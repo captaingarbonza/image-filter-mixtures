@@ -4,10 +4,10 @@
 const double GlassPatternsFilter::FILTER_STRENGTH_DEFAULT = 1.0;
 
 void ApplyGlassPatterns(QImage * source, QImage * destination, int a, double sd, double theta, int n, double h, double strength);
-void GetCrossCGP( uchar* image, uchar* noise, double* v_x, double* v_y, int width, int height, int n, double h );
-void Evaluate(uchar* image, uchar* canvas, double* v_x, double* v_y, int width, int height, int channels, double h);
-void Evaluate(double* image, double* canvas, double* v_x, double* v_y, int width, int height, int channels, double h);
-void Gauss(QImage * image, double* x_sigma, double* y_sigma, double sd);
+void TranslateImageAccordingToGlassPattern( uchar* image, uchar* noise, double* v_x, double* v_y, int width, int height, int n, double h );
+void TranslatePixels(uchar* image, uchar* canvas, double* v_x, double* v_y, int width, int height, int channels, double h);
+void TranslatePixels(double* image, double* canvas, double* v_x, double* v_y, int width, int height, int channels, double h);
+void GetImageGradients(QImage * image, double* x_sigma, double* y_sigma, double sd);
 void GetVectorField( uchar* source, double* v_x, double* v_y, int width, int height, int a, double th0, double sd);
 double WhiteNoise();
 void GetRandomNoise( uchar* destination, int width, int height );
@@ -25,45 +25,52 @@ GlassPatternsFilter::RunFilter( QImage* source )
 	const int filter_strength = FILTER_STRENGTH_DEFAULT;
 
 	QImage* canvas = new QImage(source->size(), QImage::Format_ARGB32);
-	ApplyGlassPatterns( source, canvas, 8, 14.0, M_PI/2.0, 4, 0.1, filter_strength );
+	ApplyGlassPatterns( source, canvas, 8, 8.0, PI/2.0, 4, 0.3, filter_strength );
 	return canvas;
 }
 
 void 
-ApplyGlassPatterns(QImage * img, QImage * canvas, int a, double sd, double theta, int n, double h, double strength) 
+ApplyGlassPatterns(QImage * img, QImage * canvas, int vector_length, double gauss_standard_deviation, double vector_angle, int translation_iteration, double euler_step_size, double strength) 
 ///
-/// Use glass patterns to give an impressionist look to the image
+/// Use pixel translation in the form of Glass patterns to give an impressionist look to an image.
 ///
 /// @param img
-///  The image to apply the filter to
+///  The image to apply the filter to.
 ///
 /// @param canvas
-///  A blank canvas to paint the filtered image onto
+///  A blank canvas to paint the filtered image onto.
 ///
-/// @param a
+/// @param vector_length
+///  The length of the vectors in the vector field.
+///  Affects the length of the 'brush strokes' in the finished image.
 ///
-/// @param sd
+/// @param gauss_standard_deviation
+///  The standard deviation of the Gaussian function that is used to determine the image gradient.
+///  Affects the 'roughness' of the 'brush strokes' in the finished image.
 ///
-/// @param theta
+/// @param vector_angle
+///  The angle the vectors in the vector field make with the color gradient.
 ///
-/// @param n
+/// @param translation_iterations
+///  The number of iterations for the translation of pixels along the arc defined by the vector fields.
 ///
-/// @param h
+/// @param euler_step_size
+///  The step size of the Euler algorithm used to determine a continuous Glass pattern.
 ///
 /// @param strength
-///  The strength of the filter
+///  The strength of the filter.
 ///
 /// @return
-///  Nothing
+///  Nothing.
 ///
 {
-	int new_a = a*strength;
-	if(new_a < a*strength) new_a++;
-	a = new_a;
+	// Alter the vector length according to the strength of the filter.
+	int new_vector_length = vector_length*strength;
+	if(new_vector_length < vector_length*strength) new_vector_length++;
+	vector_length = new_vector_length;
 
-	// need to smooth the image first, but meh, do that later
+	// Smooth the image
 	uchar* smoothed = new uchar[img->width()*img->height()*4];
-
 	int kernel_size = 5;
 	if(strength < 0.5) kernel_size = 3;
 	if(strength > 0.2)
@@ -84,14 +91,16 @@ ApplyGlassPatterns(QImage * img, QImage * canvas, int a, double sd, double theta
         }
     }
 	
+	// Create the noise to be used to determine the continuous Glass pattern.
 	uchar* random_noise = new uchar[img->width()*img->height()];
 	GetRandomNoise( random_noise, img->width(), img->height() );
 
-	double* v_x = new double[ img->width()*img->height()*3 ];
-	double* v_y = new double[ img->width()*img->height()*3 ];
-	GetVectorField( img->bits(), v_x, v_y, img->width(), img->height(), a, theta, sd);
+	// 
+	double* v_x = new double[ img->width()*img->height() ];
+	double* v_y = new double[ img->width()*img->height() ];
+	GetVectorField( img->bits(), v_x, v_y, img->width(), img->height(), vector_length, vector_angle, gauss_standard_deviation);
 
-	// Add noise to the image
+	// Add noise to the original image to make strokes more visible
 	for( int y = 0; y < canvas->height(); y++ )
     {
 		for( int x = 0; x < canvas->width(); x++ )
@@ -99,27 +108,24 @@ ApplyGlassPatterns(QImage * img, QImage * canvas, int a, double sd, double theta
 			double noise = (WhiteNoise() - 0.5)/8.0*strength;
 			for(int c = 0; c < 3; c++)
             {
-				smoothed[y*canvas->width()*4 + x*4 + c] += noise;
+            	int new_val = smoothed[y*canvas->width()*4 + x*4 + c] + noise*255;
+            	if( new_val > 255 )
+            	{
+            		new_val = 255;
+            	}
+            	else if( new_val < 0 )
+            	{
+					new_val = 0;
+            	}
+            	smoothed[y*canvas->width()*4 + x*4 + c] = new_val;
 			}
 		}
 	}
-	GetCrossCGP(smoothed, random_noise, v_x, v_y, canvas->width(), canvas->height(), n, h);
-	//cvScale(src,src,255.f/1.f);
-	//cvConvert(src,canvas);
 
-	/*uchar* canvas_bits = new uchar[img->width()*img->height()*4];
-	for( int j = 0; j < img->height(); j ++ )
-	{
-		for( int i = 0; i < img->width(); i++ )
-		{
-			canvas_bits[j*img->width()*4 + i*4] = (uchar)v_y[j*img->width()*3 + i*3];
-			canvas_bits[j*img->width()*4 + i*4 + 1] = (uchar)v_y[j*img->width()*3 + i*3 + 1];
-			canvas_bits[j*img->width()*4 + i*4 + 2] = (uchar)v_y[j*img->width()*3 + i*3 + 2];
-			canvas_bits[j*img->width()*4 + i*4 + 3] = 255;
-		}
-	}
-	*canvas = QImage(canvas_bits, img->width(), img->height(), img->format() );
-	delete [] canvas_bits;*/
+	// Apply a continuous Glass pattern defined by the noise and vector field created.
+	TranslateImageAccordingToGlassPattern(smoothed, random_noise, v_x, v_y, canvas->width(), canvas->height(), translation_iteration, euler_step_size);
+
+	// Copy the results to our canvas.
     *canvas = QImage(smoothed, img->width(), img->height(), img->format() );
 	delete [] v_x;
 	delete [] v_y;
@@ -128,76 +134,88 @@ ApplyGlassPatterns(QImage * img, QImage * canvas, int a, double sd, double theta
 }
 
 void 
-GetCrossCGP(uchar* image, uchar* noise, double* v_x, double* v_y, int width, int height, int n, double h) 
+TranslateImageAccordingToGlassPattern(uchar* ref_image, uchar* ref_noise, double* v_x, double* v_y, int width, int height, int iterations, double euler_step_size) 
 ///
-/// Use the Euler algorithm to determine the GP defined by z(r) and v(r).
-/// Apply the GP to the image I(r)
+/// Translates noise according to the trajectories of a given vector field giving
+/// a continuous Glass pattern. At the maximum points on each arc, translates the pixels of
+/// the original image along the same trajectory. Continues for a number of iterations.
 ///
-/// @param iR
-///  The image to apply the GP to
+/// @param ref_image
+///  The image to apply the Glass pattern to.
 ///
-/// @param z
-///  An image containing white noise
+/// @param ref-noise
+///  An image containing white noise.
 ///
-/// @param vX
+/// @param v_x
+///  The vector field in the x direction.
 ///
-/// @param vY
+/// @param v_y
+///  The vector field in the y direction.
 ///
-/// @param n
+/// @param width
+///  The width of the image.
 ///
-/// @param h
+/// @param height
+///  The height of the image.
+///
+/// @param iterations
+///  The number of times to translate pixels along the Glass pattern.
+///
+/// @param euler_step_size
+///  The step size of the euler algorithm.
 ///
 /// @return
-///  Nothing
+///  Nothing.
+///
 {
-	uchar* i1 = new uchar[width*height*4];
+	uchar* glass_image = new uchar[width*height*4];
 	for( int j = 0; j < height; j++ )
 	{
 		for( int i = 0; i < width; i++ )
 		{
 			for( int c = 0; c < 4; c++ )
 			{
-				i1[j*width*4 + i*4 + c] = image[j*width*4 + i*4 + c];
+				glass_image[j*width*4 + i*4 + c] = ref_image[j*width*4 + i*4 + c];
 			}
 		}
 	}
 
-	uchar* z1 = new uchar[width*height];
+	uchar* glass_noise = new uchar[width*height];
 	double* w_x = new double[width*height];
 	double* w_y = new double[width*height];
-	for( int i = 0; i < n; i++ ) 
+	for( int i = 0; i < iterations; i++ ) 
 	{
-		Evaluate(noise, z1, v_x, v_y, width, height, 1, h);
-		Evaluate(image, i1, v_x, v_y, width, height, 4, h);
+		TranslatePixels(ref_noise, glass_noise, v_x, v_y, width, height, 1, euler_step_size);
+		TranslatePixels(ref_image, glass_image, v_x, v_y, width, height, 4, euler_step_size);
 		for( int y = 0; y < height; y++ ) 
 		{
 			for( int x = 0; x < width; x++ ) 
 			{
-				if( noise[y*width + x] <= z1[y*width + x] ) 
+				if( ref_noise[y*width + x] <= glass_noise[y*width + x] ) 
 				{
-					noise[y*width + x] = z1[y*width + x];
+					ref_noise[y*width + x] = glass_noise[y*width + x];
 					for( int c = 0; c < 4; c++ )
 					{
-						image[y*width*4 + x*4 + c] = i1[y*width*4 + x*4 + c];
+						ref_image[y*width*4 + x*4 + c] = glass_image[y*width*4 + x*4 + c];
 					}
 				}
 			}
 		}
-		Evaluate(v_x, w_x, v_x, v_y, width, height, 1, h);
-		Evaluate(v_y, w_y, v_x, v_y, width, height, 1, h);
+		TranslatePixels(v_x, w_x, v_x, v_y, width, height, 1, euler_step_size);
+		TranslatePixels(v_y, w_y, v_x, v_y, width, height, 1, euler_step_size);
 		ImageProcessing::AddImages(v_x, w_x, v_x, width, height, 1);
 		ImageProcessing::AddImages(v_y, w_y, v_y, width, height, 1);
 	}
-	delete [] i1;
-	delete [] z1;
+	delete [] glass_image;
+	delete [] glass_noise;
 	delete [] w_x;
 	delete [] w_y;
 }
 
 void 
-Evaluate(uchar* image, uchar* canvas, double* v_x, double* v_y, int width, int height, int channels, double step_size)
+TranslatePixels(uchar* image, uchar* canvas, double* v_x, double* v_y, int width, int height, int channels, double step_size)
 ///
-/// Ummm..... @todo[crystal 5.11.2012] finish documentation
+/// Translates pixels along the trajectory described by a vector field.
 ///
 /// @param image
 ///  The image to be evaluated.
@@ -210,6 +228,12 @@ Evaluate(uchar* image, uchar* canvas, double* v_x, double* v_y, int width, int h
 ///
 /// @param v_y
 ///  The y component of the vector field.
+///
+/// @param width
+///  The width of the image.
+///
+/// @param height
+///  The height of the image.
 ///
 /// @param step_size
 ///  The step size of the Euler algorithm.
@@ -237,8 +261,10 @@ Evaluate(uchar* image, uchar* canvas, double* v_x, double* v_y, int width, int h
 					uchar color12 = image[y1*width*channels + x2*channels + c];
 					uchar color22 = image[y2*width*channels + x2*channels + c];
 
-					canvas[y*width*channels + x*channels + c] = color11*(x2 - new_x)*(y2 - new_y) + color21*(new_x - x1)*(y2 - new_y)
+					int new_color = color11*(x2 - new_x)*(y2 - new_y) + color21*(new_x - x1)*(y2 - new_y)
 						+ color12*(x2 - new_x)*(new_y - y1) + color22*(new_x - x1)*(new_y - y1);
+					if( new_color > 255 ) new_color = 255;
+					canvas[y*width*channels + x*channels + c] = (uchar)new_color;
 				}
 			}
 		}
@@ -246,9 +272,9 @@ Evaluate(uchar* image, uchar* canvas, double* v_x, double* v_y, int width, int h
 }
 
 void 
-Evaluate(double* image, double* canvas, double* v_x, double* v_y, int width, int height, int channels, double step_size)
+TranslatePixels(double* image, double* canvas, double* v_x, double* v_y, int width, int height, int channels, double step_size)
 ///
-/// Ummm..... @todo[crystal 5.11.2012] finish documentation
+/// Translates pixels along the trajectory described by a vector field.
 ///
 /// @param image
 ///  The image to be evaluated.
@@ -261,6 +287,12 @@ Evaluate(double* image, double* canvas, double* v_x, double* v_y, int width, int
 ///
 /// @param v_y
 ///  The y component of the vector field.
+///
+/// @param width
+///  The width of the image.
+///
+/// @param height
+///  The height of the image.
 ///
 /// @param step_size
 ///  The step size of the Euler algorithm.
@@ -287,7 +319,6 @@ Evaluate(double* image, double* canvas, double* v_x, double* v_y, int width, int
 					double color21 = image[y2*width*channels + x1*channels + c];
 					double color12 = image[y1*width*channels + x2*channels + c];
 					double color22 = image[y2*width*channels + x2*channels + c];
-
 					canvas[y*width*channels + x*channels + c] = color11*(x2 - new_x)*(y2 - new_y) + color21*(new_x - x1)*(y2 - new_y)
 						+ color12*(x2 - new_x)*(new_y - y1) + color22*(new_x - x1)*(new_y - y1);
 				}
@@ -297,39 +328,46 @@ Evaluate(double* image, double* canvas, double* v_x, double* v_y, int width, int
 }
 
 void 
-Gauss(uchar* source, double* x_sigma, double* y_sigma, int width, int height, double sd) 
+GetImageGradients(uchar* source, double* x_sigma, double* y_sigma, int width, int height, double standard_deviation) 
 ///
-/// Gets the convolution of the gradient of the Gaussian function with the image
+/// Gets the convolution of the gradient of the Gaussian function with the image.
+/// The gives us the color gradient of the image in the x and y direction.
 ///
-/// @param image
-///  The image to use in the convolution
+/// @param source
+///  The reference image to use in the convolution.
 ///
 /// @param x_sigma
+///  The calculated gradient in the x direction at each pixel.
 ///
 /// @param y_sigma
+///  The calculated gradient in the y direction at each pixel.
+///
+/// @param width
+///  The width of the image.
+///
+/// @param height
+///  The height of the image.
 ///
 /// @param standard_deviation
 ///  The standard deviation of the Gauss function.
 ///
 /// @return
-///  Nothing
+///  Nothing.
 ///
-{
-	// k, the size of the kernel for convolution
+{	
+	// Create the Gaussian kernel for convolution.
 	int k = 31;
-	
-	// Create the kernel for convolution
 	double* kernel_x = new double[k*k];
 	double* kernel_y = new double[k*k];
 	for(int j = -1*k/2; j < k/2 + 1; j+=5) 
 	{
 		for(int i = -1*k/2; i < k/2 + 1; i+=5) 
 		{
-			double c1 = 1.0/(2*PI*sd*sd);
-			double c2 = 2*sd*sd;
+			double c1 = 1.0/(2*PI*standard_deviation*standard_deviation);
+			double c2 = 2*standard_deviation*standard_deviation;
 			double g = c1*exp(-1.0*((i*i + j*j)/c2));
-			double g_x = g*((-1.0*i)/(sd*sd));
-			double g_y = g*((-1.0*j)/(sd*sd));
+			double g_x = g*((-1.0*i)/(standard_deviation*standard_deviation));
+			double g_y = g*((-1.0*j)/(standard_deviation*standard_deviation));
 			kernel_x[(j + k/2)*k + i + k/2] = g_x;
 			kernel_y[(j + k/2)*k + i + k/2] = g_y;
 		}
@@ -357,8 +395,8 @@ Gauss(uchar* source, double* x_sigma, double* y_sigma, int width, int height, do
 					double gauss_y = kernel_y[n*k + m];
 					for(int c = 0; c < 3; c++) 
 					{
-						x_sum[c] += source[y_pos*width*4 + x_pos*4 + c]*gauss_x;
-						y_sum[c] += source[y_pos*width*4 + x_pos*4 + c]*gauss_y;
+						x_sum[c] += source[y_pos*width*4 + x_pos*4 + c]*gauss_x/255.0;
+						y_sum[c] += source[y_pos*width*4 + x_pos*4 + c]*gauss_y/255.0;
 					}
 				}
 			}
@@ -374,33 +412,45 @@ Gauss(uchar* source, double* x_sigma, double* y_sigma, int width, int height, do
 }
 
 void 
-GetVectorField( uchar* source, double* v_x, double* v_y, int width, int height, int a, double th0, double standard_deviation ) 
+GetVectorField( uchar* source, double* v_x, double* v_y, int width, int height, int vector_length, double vector_angle, double gauss_standard_deviation ) 
 ///
-/// Get the vector field v(r) based on the image I(r) given the parameters a and theta0
+/// Get the vector field based on the image 'source', where each vector is relative to
+/// the image gradient at this point.
 ///
 /// @param source
-///  The image to calculate the vector field for
+///  The image to calculate the vector field for.
 ///
 /// @param v_v
-///  The image used to store the x component of the vector field
+///  The image used to store the x component of the vector field.
 ///
 /// @param v_y
-///  The image used to store the y component of the vector field
+///  The image used to store the y component of the vector field.
 ///
-/// @param a
+/// @param width
+///  The width of the image.
 ///
-/// @param th0
+/// @param height
+///  The height of the image.
 ///
-/// @param sd
+/// @param vector_length
+///  The length of the vectors in the vector field.
+///
+/// @param vector_angle
+///  The angle the vectors make with the image gradient.
+///
+/// @param gauss_standard_deviation
+///  The standard deviation of the Gaussian function used to determine the image gradients.
 ///
 /// @return
-///  Nothing
+///  Nothing.
+///
 {
 	
 	// Convolve the smoothed image with the gradient of the gaussian function
 	double* x_sigma = new double[ width*height*3 ];
 	double* y_sigma = new double[ width*height*3 ];
-	Gauss( source, x_sigma, y_sigma, width, height, standard_deviation);
+	GetImageGradients( source, x_sigma, y_sigma, width, height, gauss_standard_deviation);
+
 	for(int y = 0; y < height; y++) 
 	{
 		for(int x = 0; x < width; x++) 
@@ -419,23 +469,19 @@ GetVectorField( uchar* source, double* v_x, double* v_y, int width, int height, 
 			double lambda2 = (e + g - sqrt((e-g)*(e-g) + 4.0*f*f))/2.0;
 			if(lambda1 != lambda2) {
 				double theta = 0.5*atan2((2.0*f),(e-g));
-				double theta2 = theta + M_PI/2.0;
+				double theta2 = theta + PI/2.0;
 				double f_th1 = 0.5*((e + g) + cos(2.0*theta)*(e - g) + 2.0*f*sin(2.0*theta));
 				double f_th2 = 0.5*((e + g) + cos(2.0*theta2)*(e - g) + 2.0*f*sin(2.0*theta2));
 				if(f_th2 > f_th1) {
 					theta = theta2;
 				}
-				for( int c = 0; c < 3; c++ )
-				{
-					v_x[y*width*3 + x*3 + c] = (double)a*cos(theta + th0);
-					v_y[y*width*3 + x*3 + c] = (double)a*sin(theta + th0);
-				}
+
+				// Find the vectors defined by our vector length, vector angle, and image gradient theta.
+				v_x[y*width + x] = (double)vector_length*cos(theta + vector_angle);
+				v_y[y*width + x] = (double)vector_length*sin(theta + vector_angle);
 			} else {
-				for( int c = 0; c < 3; c++ )
-				{
-					v_x[y*width*3 + x*3 + c] = 0.0;
-					v_y[y*width*3 + x*3 + c] = 0.0;
-				}
+				v_x[y*width + x] = 0.0;
+				v_y[y*width + x] = 0.0;
 			}
 		}
 	}
@@ -444,10 +490,11 @@ GetVectorField( uchar* source, double* v_x, double* v_y, int width, int height, 
 double 
 WhiteNoise() 
 ///
-/// Returns Gaussian white noise between 0 and 1
+/// Returns Gaussian white noise between 0 and 1.
 ///
 /// @return
-///  The white noise value calculated
+///  The white noise value calculated.
+///
 {
 	double r = 0.0;
 	for(int i = 0; i < 50; i++) {
@@ -464,13 +511,19 @@ WhiteNoise()
 void 
 GetRandomNoise( uchar* destination, int width, int height ) 
 ///
-/// Fills the image z(r) with Gaussian white noise
+/// Fills an image with Gaussian white noise
 ///
-/// @param z
-///  The image z(r)
+/// @param destination
+///  The image to store the white noise in.
+///
+/// @param width
+///  The width of the image.
+///
+/// @param height
+///  The height of the image.
 ///
 /// @return
-///  Nothing
+///  Nothing.
 ///
 {
 	uchar* noise = new uchar[width*height];
